@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chenyue.combat.server.mapper.RedRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.chenyue.combat.server.domain.RedRecord">
+        <id property="id" column="id" jdbcType="OTHER"/>
+        <result property="userId" column="user_id" jdbcType="INTEGER"/>
+        <result property="total" column="total" jdbcType="INTEGER"/>
+        <result property="amount" column="amount" jdbcType="DOUBLE"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+        <result property="redPacket" column="red_packet" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id
+        ,user_id,total,
+        amount,create_time,
+        update_time,red_packet
+    </sql>
+
+    <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from red_record
+        where id = #{id,jdbcType=OTHER}
+    </select>
+
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+        delete
+        from red_record
+        where id = #{id,jdbcType=OTHER}
+    </delete>
+    <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.chenyue.combat.server.domain.RedRecord"
+            useGeneratedKeys="true">
+        insert into red_record
+        ( id, user_id, total
+        , amount, create_time
+        , update_time, red_packet)
+        values ( #{id,jdbcType=OTHER}, #{userId,jdbcType=INTEGER}, #{total,jdbcType=INTEGER}
+               , #{amount,jdbcType=DOUBLE}, #{createTime,jdbcType=TIMESTAMP}
+               , #{updateTime,jdbcType=TIMESTAMP}, #{redPacket,jdbcType=VARBINARY})
+    </insert>
+    <insert id="insertSelective" parameterType="com.chenyue.combat.server.domain.RedRecord" >
+        insert into red_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="total != null">total,</if>
+            <if test="amount != null">amount,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="redPacket != null">red_packet,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id,jdbcType=INTEGER},</if>
+            <if test="userId != null">#{userId,jdbcType=INTEGER},</if>
+            <if test="total != null">#{total,jdbcType=INTEGER},</if>
+            <if test="amount != null">#{amount,jdbcType=DOUBLE},</if>
+            <if test="createTime != null">#{createTime,jdbcType=TIMESTAMP},</if>
+            <if test="updateTime != null">#{updateTime,jdbcType=TIMESTAMP},</if>
+            <if test="redPacket != null">#{redPacket,jdbcType=VARBINARY},</if>
+        </trim>
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT LAST_INSERT_ID() AS id
+        </selectKey>
+    </insert>
+    <update id="updateByPrimaryKeySelective" parameterType="com.chenyue.combat.server.domain.RedRecord">
+        update red_record
+        <set>
+            <if test="userId != null">
+                user_id = #{userId,jdbcType=INTEGER},
+            </if>
+            <if test="total != null">
+                total = #{total,jdbcType=INTEGER},
+            </if>
+            <if test="amount != null">
+                amount = #{amount,jdbcType=DOUBLE},
+            </if>
+            <if test="createTime != null">
+                create_time = #{createTime,jdbcType=TIMESTAMP},
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime,jdbcType=TIMESTAMP},
+            </if>
+            <if test="redPacket != null">
+                red_packet = #{redPacket,jdbcType=VARBINARY},
+            </if>
+        </set>
+        where id = #{id,jdbcType=OTHER}
+    </update>
+    <update id="updateByPrimaryKey" parameterType="com.chenyue.combat.server.domain.RedRecord">
+        update red_record
+        set user_id     = #{userId,jdbcType=INTEGER},
+            total       = #{total,jdbcType=INTEGER},
+            amount      = #{amount,jdbcType=DOUBLE},
+            create_time = #{createTime,jdbcType=TIMESTAMP},
+            update_time = #{updateTime,jdbcType=TIMESTAMP},
+            red_packet  = #{redPacket,jdbcType=VARBINARY}
+        where id = #{id,jdbcType=OTHER}
+    </update>
+</mapper>
