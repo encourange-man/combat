@@ -5,14 +5,11 @@ import com.chenyue.combat.server.service.RedService;
 import com.chenyue.combat.server.utils.RedPacketUtil;
 import com.chenyue.combat.web.exception.BusinessException;
 import com.chenyue.combat.web.service.RedPacketService;
-import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -30,7 +27,7 @@ public class RedPacketServiceImpl implements RedPacketService {
     public static final String keyPreFix = "redis:red:packet";
 
     @Resource
-    private ListOperations<String, Object> redisListOperate;
+    private RedisTemplate redisTemplate;
 
     @Resource
     private ValueOperations<String, Object> redisValueOperate;
@@ -58,7 +55,7 @@ public class RedPacketServiceImpl implements RedPacketService {
 
         //将随机金额列表存储redis缓存列表中
         String redId = keyPreFix + request.getUserId() + ":" + timestamp;
-        redisListOperate.rightPushAll(redId, redPacketLists);
+        redisTemplate.opsForList().leftPushAll(redId, redPacketLists);
 
         //将红包个数缓存到redis中
         String redTotalKey = redId + ":total";
@@ -94,7 +91,7 @@ public class RedPacketServiceImpl implements RedPacketService {
 
         if (haveRedPacket) {
             //从预计算的随机红包列表中，拿出一个红包
-            Object packetValue = redisListOperate.leftPop(redId);
+            Object packetValue =  redisTemplate.opsForList().rightPop(redId);
             //packetValue !=null，表示当前的红包还有钱
             if (Objects.nonNull(packetValue)) {
                 //更新缓存中的红包个数-1
