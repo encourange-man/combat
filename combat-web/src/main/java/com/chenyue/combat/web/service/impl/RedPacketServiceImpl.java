@@ -81,9 +81,9 @@ public class RedPacketServiceImpl implements RedPacketService {
         String redTotalKey = redId + ":total";
 
         //用户如果已经抢过红包，直接返回红包金额
-        String rob = (String) redisValueOperate.get(userRobKey);
+        BigDecimal rob = (BigDecimal) redisValueOperate.get(userRobKey);
         if (Objects.nonNull(rob)) {
-            return new BigDecimal(rob);
+            return rob;
         }
 
         //点红包逻辑-主要判断缓存中所剩的红包是否大于0（即是否还有红包）
