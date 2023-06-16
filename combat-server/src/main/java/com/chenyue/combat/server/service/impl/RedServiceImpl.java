@@ -2,9 +2,11 @@ package com.chenyue.combat.server.service.impl;
 
 import com.chenyue.combat.server.domain.RedDetail;
 import com.chenyue.combat.server.domain.RedRecord;
+import com.chenyue.combat.server.domain.RedRobRecord;
 import com.chenyue.combat.server.entity.dto.RedPacketDTO;
 import com.chenyue.combat.server.mapper.RedDetailMapper;
 import com.chenyue.combat.server.mapper.RedRecordMapper;
+import com.chenyue.combat.server.mapper.RedRobRecordMapper;
 import com.chenyue.combat.server.service.RedService;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,9 @@ public class RedServiceImpl implements RedService {
 
     @Resource
     private RedRecordMapper redRecordMapper;
+
+    @Resource
+    private RedRobRecordMapper redRobRecordMapper;
 
 
     /**
@@ -65,6 +70,11 @@ public class RedServiceImpl implements RedService {
      */
     @Override
     public void recordRobRedPacket(Integer userId, String redId, BigDecimal amount) {
-
+        RedRobRecord redRobRecord = new RedRobRecord();
+        redRobRecord.setUserId(userId);
+        redRobRecord.setRedPacket(redId);
+        redRobRecord.setAmount(amount);
+        redRobRecord.setRobTime(new Date());
+        redRobRecordMapper.insertSelective(redRobRecord);
     }
 }

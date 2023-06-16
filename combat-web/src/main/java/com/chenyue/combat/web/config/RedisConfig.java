@@ -41,12 +41,12 @@ public class RedisConfig {
     }
 
     @Bean
-    public ListOperations<String, Object> listOperations(RedisTemplate<String, Object> redisTemplate) {
+    public ListOperations<String, Object> redisListOperate(RedisTemplate<String, Object> redisTemplate) {
         return redisTemplate.opsForList();
     }
 
     @Bean
-    public ValueOperations<String, Object> valueOperations(RedisTemplate<String, Object> redisTemplate) {
+    public ValueOperations<String, Object> redisValueOperate(RedisTemplate<String, Object> redisTemplate) {
         return redisTemplate.opsForValue();
     }
 }

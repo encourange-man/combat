@@ -39,8 +39,14 @@ public class RedPacketController {
         return new BaseResponse(Success, redId);
     }
 
-    @GetMapping("/queryRedis")
-    public BaseResponse queryRedis(@RequestParam String key) {
-        return new BaseResponse(Success, redisTemplate.opsForValue().get(key));
+    /**
+     * 抢红包
+     * @param redId
+     * @param userId
+     * @return
+     */
+    @GetMapping("/rob")
+    public BaseResponse queryRedis(@RequestParam String redId, @RequestParam Integer userId) {
+        return new BaseResponse(Success, redPacketService.rob(userId, redId));
     }
 }
