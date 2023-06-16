@@ -4,6 +4,7 @@ import com.chenyue.combat.server.entity.dto.RedPacketDTO;
 import com.chenyue.combat.server.entity.vo.BaseResponse;
 import com.chenyue.combat.web.service.RedPacketService;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
@@ -11,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 
+import java.math.BigDecimal;
+import java.util.Objects;
+
+import static com.chenyue.combat.server.enums.StatusCode.Fail;
 import static com.chenyue.combat.server.enums.StatusCode.Success;
 
 
@@ -18,6 +23,7 @@ import static com.chenyue.combat.server.enums.StatusCode.Success;
  * @Author chenyue
  * @Date 2023/6/14
  */
+@Slf4j
 @RestController
 @RequestMapping("/red/packet")
 public class RedPacketController {
@@ -47,6 +53,11 @@ public class RedPacketController {
      */
     @GetMapping("/rob")
     public BaseResponse queryRedis(@RequestParam String redId, @RequestParam Integer userId) {
-        return new BaseResponse(Success, redPacketService.rob(userId, redId));
+        BigDecimal rob = redPacketService.rob(userId, redId);
+        if(Objects.nonNull(rob)) {
+            log.info("用户：{}，抢到了红包：{}", userId, rob);
+            return new BaseResponse(Success, rob);
+        }
+        return new BaseResponse(Fail, "抢完了！");
     }
 }

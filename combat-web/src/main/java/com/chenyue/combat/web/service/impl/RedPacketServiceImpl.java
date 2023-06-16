@@ -1,6 +1,7 @@
 package com.chenyue.combat.web.service.impl;
 
 import com.chenyue.combat.server.entity.dto.RedPacketDTO;
+import com.chenyue.combat.server.enums.StatusCode;
 import com.chenyue.combat.server.service.RedService;
 import com.chenyue.combat.server.utils.RedPacketUtil;
 import com.chenyue.combat.web.exception.BusinessException;
@@ -16,6 +17,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import static com.chenyue.combat.server.enums.StatusCode.Fail;
 
 /**
  * @Author chenyue
@@ -90,22 +93,31 @@ public class RedPacketServiceImpl implements RedPacketService {
         boolean haveRedPacket = clickRedPacket(redId);
 
         if (haveRedPacket) {
-            //从预计算的随机红包列表中，拿出一个红包
-            Object packetValue =  redisTemplate.opsForList().rightPop(redId);
-            //packetValue !=null，表示当前的红包还有钱
-            if (Objects.nonNull(packetValue)) {
-                //更新缓存中的红包个数-1
-                Integer currTotal = redisValueOperate.get(redTotalKey) != null ? (Integer) redisValueOperate.get(redTotalKey) : 0;
-                redisValueOperate.set(redTotalKey, currTotal - 1);
+            //上分布式锁：一个红包每个人只能抢到一次随机金额，即永远保证1对1的关系
+            final String lockKey = redId + userId + "_lock";
+            Boolean lock = redisValueOperate.setIfAbsent(lockKey, redId, 24, TimeUnit.HOURS);
+            try{
+                if(lock) {
+                    //从预计算的随机红包列表中，拿出一个红包
+                    Object packetValue =  redisTemplate.opsForList().rightPop(redId);
+                    //packetValue !=null，表示当前的红包还有钱
+                    if (Objects.nonNull(packetValue)) {
+                        //更新缓存中的红包个数-1
+                        Integer currTotal = redisValueOperate.get(redTotalKey) != null ? (Integer) redisValueOperate.get(redTotalKey) : 0;
+                        redisValueOperate.set(redTotalKey, currTotal - 1);
 
-                //将抢到红包时用户的账号信息及抢到的金额等信息记入数据库
-                BigDecimal result = new BigDecimal(packetValue.toString()).divide(new BigDecimal(100));
-                redService.recordRobRedPacket(userId, redId, new BigDecimal(packetValue.toString()));
+                        //将抢到红包时用户的账号信息及抢到的金额等信息记入数据库
+                        BigDecimal result = new BigDecimal(packetValue.toString()).divide(new BigDecimal(100));
+                        redService.recordRobRedPacket(userId, redId, new BigDecimal(packetValue.toString()));
 
-                //将当前抢到红包的用户设置进缓存系统中，用于表示当前用户已经抢过红包了
-                redisValueOperate.set(redId + userId + ":rob", result, 24L, TimeUnit.HOURS);
-                log.info("当前用户抢到红包了：userId={} key={} 金额={} ", userId, redId, result);
-                return result;
+                        //将当前抢到红包的用户设置进缓存系统中，用于表示当前用户已经抢过红包了
+                        redisValueOperate.set(redId + userId + ":rob", result, 24L, TimeUnit.HOURS);
+                        log.info("当前用户抢到红包了：userId={} key={} 金额={} ", userId, redId, result);
+                        return result;
+                    }
+                }
+            }catch (Exception e) {
+                throw new BusinessException("系统异常-抢红包-分布式加锁失败！");
             }
         }
         //表示没有抢到红包
