@@ -42,7 +42,7 @@
         insert into red_rob_record
         <trim prefix="(" suffix=")" suffixOverrides=",">
                 <if test="id != null">id,</if>
-                <if test="userId != null">userId,</if>
+                <if test="userId != null">user_id,</if>
                 <if test="redPacket != null">red_packet,</if>
                 <if test="amount != null">amount,</if>
                 <if test="robTime != null">rob_time,</if>
