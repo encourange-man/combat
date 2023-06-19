@@ -1,4 +1,10 @@
 # 分布式框架实战练手项目
+- [分布式框架实战练手项目](#分布式框架实战练手项目)
+  - [项目架构介绍](#项目架构介绍)
+    - [集成日志框架](#集成日志框架)
+    - [集成mybatis](#集成mybatis)
+  - [Springboot集成Redis](#springboot集成redis)
+  - [Redis应用场景之抢红包系统](#redis应用场景之抢红包系统)
 
 
 ## 项目架构介绍
@@ -302,3 +308,113 @@ CREATE TABLE `red_rob_record` (
 ) ENGINE=InnoDB  COMMENT='抢红包记录';
 ```
 
+## Redis分布式锁
+分布式锁的要求：
+- 排他性：保证在分布式情况，共享资源同一时间只能被一台机器的一个线程执行
+- 避免死锁：锁被获取后，在一段时间后，一定要能被释放
+- 高可用：获取和释放锁，要保证高可用且性能要佳
+- 可重入：
+- 公平性（可选）：保证来自不同机器的并发线程可以公平获取到锁
+
+目前业界也提供了多种可靠的方式实现分布式锁，常见的方式有：
+- 基于数据库级别的乐观锁：主要是通过在查询、操作共享数据记录时带上一个标识字段version，通过version来控制每次对数据记录执行的更新操作。
+- 基于数据库级别的悲观锁：在这里以MySQL的InnoDB引擎为例，它主要是通过在查询共享的数据记录时加上`for Update`字眼，表示该共享的数据记录已经被当前线程锁住了（行级别锁、表级别锁），只有当该线程操作完成并提交事务之后，才会释放该锁，从而其他线程才能获取到该数据记录
+- 基于Redis的原子操作：主要是通过Redis提供的原子操作`SETNX`与`EXPIRE`来实现。`SETNX`表示只有当Key在Redis不存在时才能设置成功，通常这个Key需要设计为与共享的资源有联系，用于间接地当作“锁”，并采用EXPIRE操作释放获取的锁。
+- 基于ZooKeeper的互斥排它锁：这种机制主要是通过ZooKeeper在指定的标识字符串（通常这个标识字符串需要设计为跟共享资源有联系，即可以间接地当作“锁”）下维护一个临时有序的节点列表Node List，并保证同一时刻并发线程访问共享资源时只能有一个最小序号的节点（即代表获取到锁的线程），该节点对应的线程即可执行访问共享资源的操作
+
+### 基于数据库实现分布式锁
+以“用户提现金额”为例子。在高并发场景下，用户同时不间断的进行提现操作，很可能出现账户余额为负的情况。下面以基于数据库的分布式锁的方式，实现这个场景操作。
+```sql
+CREATE TABLE `user_account` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `user_id` int(11) NOT NULL COMMENT '用户账户id',
+  `amount` decimal(10,4) NOT NULL COMMENT '账户余额',
+  `version` int(11) DEFAULT '1' COMMENT '版本号字段',
+  `is_active` tinyint(11) DEFAULT '1' COMMENT '是否有效(1=是；0=否)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_user_id` (`user_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户账户余额记录表';
+
+CREATE TABLE `user_account_record` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `account_id` int(11) NOT NULL COMMENT '账户表主键id',
+  `money` decimal(10,4) DEFAULT NULL COMMENT '提现成功时记录的金额',
+  `create_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户每次成功提现时的金额记录表';
+```
+#### 数据库-乐观锁
+乐观锁，通常是采用“版本号version”机制进行实现。当前线程取出数据记录时，会顺带把版本号字段version的值取出来，最后在更新该数据记录时，将该version的取值作为更新的条件。
+当更新成功之后，同时将版本号version的值加1，而其他同时获取到该数据记录的线程在更新时由于version已经不是当初获取的那个数据记录，因而将更新失败， 从而避免并发多线程访问
+共享数据时出现数据不一致的现象。
+```sql
+update table set key=value, version=version+1 where id=#{id} and version= #{version};
+```
+
+核心代码：
+```java
+@Slf4j
+@Service
+public class DataBaseLockServiceImpl implements DataBaseLockService {
+  @Resource
+  private UserAccountMapper userAccountMapper;
+  
+  @Resource
+  private UserAccountRecordMapper userAccountRecordMapper;
+
+  /**
+   * 提现-基于数据库的乐观锁
+   * @param dto
+   */
+  @Override
+  public void takeMoneyWithOptimisticLock(UserCountDTO dto) {
+    //查询用户的账户信息
+    UserAccount userAccount = userAccountMapper.selectByUserId(dto.getUserId());
+
+    //账户余额是否够，如果够，进行提现
+    if(Objects.nonNull(userAccount) && userAccount.getAmount().doubleValue() >= dto.getAmount()) {
+      //基于乐观锁更新账户余额，保证查询和更新的原子操作
+      int res = userAccountMapper.updateAmountByVersion(dto.getAmount(), userAccount.getId(), userAccount.getVersion());
+
+      if(res > 0) {
+        //插入提交申请提现记录
+        UserAccountRecord userAccountRecord = new UserAccountRecord();
+        userAccountRecord.setAccountId(userAccount.getId());
+        userAccountRecord.setMoney(BigDecimal.valueOf(dto.getAmount()));
+        userAccountRecordMapper.insertSelective(userAccountRecord);
+        log.info("当前提取金额为：{}, 账户余额为：{}", dto.getAmount(), userAccount.getAmount());
+      }else {
+        throw new BusinessException("账户不存在或者账户余额不足！");
+      }
+    }
+  }
+}
+```
+
+```xml
+<update id="updateAmountByVersion">
+    update user_account set amount = amount - #{money}, version = #{version} + 1
+    where id = #{id} and version = #{version} and amount > 0 and (amount - #{money}) >= 0
+</update>
+```
+
+另外，使用jmeter在QPS 2000的场景测试如下的sql也是可行的：
+```sql
+<update id="updateAmount" >
+    update user_account set amount = amount - #{money}
+    where id = #{id} and amount > 0 and (amount - #{money}) >= 0
+</update>
+```
+因为，虽然查询余额和扣除余额不是一个原子操作，但是Innodb的行锁保证同一时刻只一个线程执行update操作，且执行时因为有amount>0 和
+(amount - #{money}) >= 0 的限制，所以保证不会出现多扣的情况。
+
+### 数据库-悲观锁
+悲观锁，即每次并发线程在获取数据的时候认为其他线程会对数据进行修改，因而每次在获取数据时都会上锁，而其他线程访问该数据的时候就会发生阻塞的现象，最终只有当前线程释放了该共享资源的锁，其他线程才能获取到锁，并对共享资源进行操作。
+比如在关系型数据库中，行锁、表锁、读锁和写锁等，都是类似悲观锁的机制，在进行操作之前先上锁。
+```sql
+select 字段列表 from 数据库表 for update
+```
+缺点：
+- 由于每个线程在查询数据的时候都需要上锁，只有当该线程对该共享资源操作完毕并释放锁之后，其他正在等待中的线程才能获取到锁。这种方式将会造成大量的线程发生堵塞的现象，在某种程度上会对DB（数据库）服务器造成一定的压力
+
+所以，基于数据库级别的悲观锁适用于并发量不大的情况，特别是“读”请求数据量不大的情况。

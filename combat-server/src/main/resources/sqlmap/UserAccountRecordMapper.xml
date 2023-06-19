@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chenyue.combat.server.mapper.UserAccountRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.chenyue.combat.server.domain.UserAccountRecord">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="accountId" column="account_id" jdbcType="INTEGER"/>
+            <result property="money" column="money" jdbcType="DECIMAL"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,account_id,money,
+        create_time
+    </sql>
+
+    <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from user_account_record
+        where  id = #{id,jdbcType=INTEGER} 
+    </select>
+
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+        delete from user_account_record
+        where  id = #{id,jdbcType=INTEGER} 
+    </delete>
+    <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.chenyue.combat.server.domain.UserAccountRecord" useGeneratedKeys="true">
+        insert into user_account_record
+        ( id,account_id,money
+        ,create_time)
+        values (#{id,jdbcType=INTEGER},#{accountId,jdbcType=INTEGER},#{money,jdbcType=DECIMAL}
+        ,#{createTime,jdbcType=TIMESTAMP})
+    </insert>
+    <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.chenyue.combat.server.domain.UserAccountRecord" useGeneratedKeys="true">
+        insert into user_account_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+                <if test="id != null">id,</if>
+                <if test="accountId != null">account_id,</if>
+                <if test="money != null">money,</if>
+                <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+                <if test="id != null">#{id,jdbcType=INTEGER},</if>
+                <if test="accountId != null">#{accountId,jdbcType=INTEGER},</if>
+                <if test="money != null">#{money,jdbcType=DECIMAL},</if>
+                <if test="createTime != null">#{createTime,jdbcType=TIMESTAMP},</if>
+        </trim>
+    </insert>
+    <update id="updateByPrimaryKeySelective" parameterType="com.chenyue.combat.server.domain.UserAccountRecord">
+        update user_account_record
+        <set>
+                <if test="accountId != null">
+                    account_id = #{accountId,jdbcType=INTEGER},
+                </if>
+                <if test="money != null">
+                    money = #{money,jdbcType=DECIMAL},
+                </if>
+                <if test="createTime != null">
+                    create_time = #{createTime,jdbcType=TIMESTAMP},
+                </if>
+        </set>
+        where   id = #{id,jdbcType=INTEGER} 
+    </update>
+    <update id="updateByPrimaryKey" parameterType="com.chenyue.combat.server.domain.UserAccountRecord">
+        update user_account_record
+        set 
+            account_id =  #{accountId,jdbcType=INTEGER},
+            money =  #{money,jdbcType=DECIMAL},
+            create_time =  #{createTime,jdbcType=TIMESTAMP}
+        where   id = #{id,jdbcType=INTEGER} 
+    </update>
+</mapper>

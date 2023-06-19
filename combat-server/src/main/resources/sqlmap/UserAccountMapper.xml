@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chenyue.combat.server.mapper.UserAccountMapper">
+
+    <resultMap id="BaseResultMap" type="com.chenyue.combat.server.domain.UserAccount">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="userId" column="user_id" jdbcType="INTEGER"/>
+            <result property="amount" column="amount" jdbcType="DECIMAL"/>
+            <result property="version" column="version" jdbcType="INTEGER"/>
+            <result property="isActive" column="is_active" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,amount,
+        version,is_active
+    </sql>
+
+    <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from user_account
+        where  id = #{id,jdbcType=INTEGER} 
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from user_account
+        where user_id = #{userId}
+    </select>
+
+    <!--根据用户id查询-用于悲观锁-->
+    <select id="selectByUserIdLock" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from user_account
+        where user_id = #{userId}
+        for update
+    </select>
+
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+        delete from user_account
+        where  id = #{id,jdbcType=INTEGER} 
+    </delete>
+    <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.chenyue.combat.server.domain.UserAccount" useGeneratedKeys="true">
+        insert into user_account
+        ( id,user_id,amount
+        ,version,is_active)
+        values (#{id,jdbcType=INTEGER},#{userId,jdbcType=INTEGER},#{amount,jdbcType=DECIMAL}
+        ,#{version,jdbcType=INTEGER},#{isActive,jdbcType=TINYINT})
+    </insert>
+    <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.chenyue.combat.server.domain.UserAccount" useGeneratedKeys="true">
+        insert into user_account
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+                <if test="id != null">id,</if>
+                <if test="userId != null">userId,</if>
+                <if test="amount != null">amount,</if>
+                <if test="version != null">version,</if>
+                <if test="isActive != null">isActive,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+                <if test="id != null">#{id,jdbcType=INTEGER},</if>
+                <if test="userId != null">#{userId,jdbcType=INTEGER},</if>
+                <if test="amount != null">#{amount,jdbcType=DECIMAL},</if>
+                <if test="version != null">#{version,jdbcType=INTEGER},</if>
+                <if test="isActive != null">#{isActive,jdbcType=TINYINT},</if>
+        </trim>
+    </insert>
+    <update id="updateByPrimaryKeySelective" parameterType="com.chenyue.combat.server.domain.UserAccount">
+        update user_account
+        <set>
+                <if test="userId != null">
+                    user_id = #{userId,jdbcType=INTEGER},
+                </if>
+                <if test="amount != null">
+                    amount = #{amount,jdbcType=DECIMAL},
+                </if>
+                <if test="version != null">
+                    version = #{version,jdbcType=INTEGER},
+                </if>
+                <if test="isActive != null">
+                    is_active = #{isActive,jdbcType=TINYINT},
+                </if>
+        </set>
+        where   id = #{id,jdbcType=INTEGER} 
+    </update>
+
+    <update id="updateAmount" >
+        update user_account set amount = amount - #{money}
+        where id = #{id}
+    </update>
+
+
+    <update id="updateAmountByVersion">
+        update user_account set amount = amount - #{money}, version = #{version} + 1
+        where id = #{id} and version = #{version} and amount > 0 and (amount - #{money}) >= 0
+    </update>
+
+    <update id="updateByPrimaryKey" parameterType="com.chenyue.combat.server.domain.UserAccount">
+        update user_account
+        set 
+            user_id =  #{userId,jdbcType=INTEGER},
+            amount =  #{amount,jdbcType=DECIMAL},
+            version =  #{version,jdbcType=INTEGER},
+            is_active =  #{isActive,jdbcType=TINYINT}
+        where   id = #{id,jdbcType=INTEGER} 
+    </update>
+
+    <update id="updateAmountLock">
+        UPDATE user_account SET amount = amount - #{money}
+        WHERE id=#{id} and amount >0 and (amount - #{money})>=0
+    </update>
+</mapper>
