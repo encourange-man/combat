@@ -308,7 +308,7 @@ CREATE TABLE `red_rob_record` (
 ) ENGINE=InnoDB  COMMENT='抢红包记录';
 ```
 
-## Redis分布式锁
+## 分布式锁
 分布式锁的要求：
 - 排他性：保证在分布式情况，共享资源同一时间只能被一台机器的一个线程执行
 - 避免死锁：锁被获取后，在一段时间后，一定要能被释放
@@ -418,3 +418,268 @@ select 字段列表 from 数据库表 for update
 - 由于每个线程在查询数据的时候都需要上锁，只有当该线程对该共享资源操作完毕并释放锁之后，其他正在等待中的线程才能获取到锁。这种方式将会造成大量的线程发生堵塞的现象，在某种程度上会对DB（数据库）服务器造成一定的压力
 
 所以，基于数据库级别的悲观锁适用于并发量不大的情况，特别是“读”请求数据量不大的情况。
+
+### 基于redis分布式锁
+在Redis的知识体系与底层基础架构中，其实并没有直接提供所谓的“分布式锁”组件，而是间接地借助其原子操作加以实现。之所以其原子操作可以实现分布式锁的功能，主要是得益于Redis的**单线程机制**，即不管外层应用系统并发了N多个线程，当每个线程都需要使用Redis的某个原子操作时，是需要进行“排队等待”的，即在其底层系统架构中，同一时刻、同一个部署节点中只有一个线程执行某种原子操作。
+
+下面以抢红包为例，描述一下redis分布式加锁的过程：
+```java
+//还有红包
+if (haveRedPacket) {
+    //上分布式锁：一个红包每个人只能抢到一次随机金额，即永远保证1对1的关系
+    final String lockKey = redId + userId + "_lock";
+    try{
+        //使用setnx加锁
+        Boolean lock = redisValueOperate.setIfAbsent(lockKey, redId, 24, TimeUnit.HOURS);
+        //加锁成功
+        if(lock) {
+            //从预计算的随机红包列表中，拿出一个红包
+            
+            //更新缓存中的红包个数-1
+
+            //记录抢红包记录
+        
+            //将当前抢到红包的用户设置进缓存系统中，用于表示当前用户已经抢过红包了
+        }
+    }catch (Exception e) {
+        //释放分布式锁，谁加的锁，谁释放
+        if(Objects.equals(redisValueOperate.get(lockKey), redId)) {
+            redisValueOperate.decrement(lockKey);
+        }
+        throw new BusinessException("系统异常-抢红包-分布式加锁失败！");
+    }
+}
+```
+
+基于Redis原子操作实现的分布式都有哪些缺点：
+1. 单点故障：如果 Redis 服务器宕机或网络故障，会导致锁无法释放，从而导致死锁问题。
+2. 锁竞争：由于 Redis 是单线程的，如果锁的持有时间过长，会导致其他请求的等待时间过长，影响系统的吞吐量。
+3. 锁误解锁：如果锁的持有者在释放锁之前发生了异常，会导致锁无法正确释放，从而导致死锁问题。
+4. 时效性问题：如果锁的持有时间过长，可能会导致锁过期，从而导致其他请求获取到已经过期的锁，出现并发问题。
+
+因此，在使用基于 Redis 的分布式锁时，需要考虑以上问题，并根据实际情况进行优化和调整。
+
+### 基于zookeeper分布式锁
+ZooKeeper可以通过创建与共享资源相关的“顺序临时节点”，并采用其提供的监听器Watcher机制，从而控制多线程对共享资源的并发访问。
+
+
+
+## Redisson
+[Redission官网](https://redisson.org/)
+
+springboot集成Redisson:
+1.定义配置
+```properties
+#redisson配置
+redisson.host.config=redis://127.0.0.1:6379
+```
+2.初始化配置
+```java
+@EnableCaching
+@Configuration
+public class RedisConfig {
+    @Autowired
+    private Environment environment;
+
+    @Bean
+    public RedissonClient config() {
+        Config config = new Config();
+        //单一节点模式
+        config.useSingleServer()
+                .setAddress(environment.getProperty("redisson.host.config"))
+                .setKeepAlive(true);
+
+        return Redisson.create(config);
+    }
+}
+```
+
+Redisson功能特性：
+- 多种连接方式：指客户端的应用系统可以拥有多种方式连接到Redisson所在的服务节点，比如同步连接的方式、异步连接的方式及异步流连接的方式等。
+- 数据序列化：指对象的序列化和反序列化方式，从而实现Java对象在Redis的存储和读取功能。
+- 集合数据分片：Redisson可以通过自身的分片算法，将一个大集合拆分为若干个片段，然后将拆分后的片段均匀地分布到集群里的各个节点中，以保证每个节点分配到的片段数量大体相同。
+- 分布式对象：可以说大部分数据组件都是 Redisson所特有的，比如布隆过滤器、BitSet、基于订阅发布式的话题功能等。
+- 分布式集合：这一点和原生的缓存中间件Redis所提供的数据结构类似，包括列表List、集合Set、映射Map，以及Redisson所特有的延迟队列等数据组件。
+- 分布式锁：是Redisson至关重要的组件。目前在Java应用系统中使用Redisson最多的功能特性当属分布式锁了，其提供了可重入锁、一次性锁、读写锁等组件。
+- 分布式服务：指可以实现不在同一个Host（机器节点）的远程服务之间的调度。除此之外，还包括定时任务的调度等。
+
+### 应用场景之布隆过滤器
+Redisson分布式对象提供数据组件“布隆过滤器”（Bloom Filter），它与JDK提供的HashSet有异曲同工之妙，不过它不需要在 “判重”之前将数据列表加载至内存中。
+
+Redisson的“布隆过滤器”需要将当前的元素经过事先设计构建好的K个哈希函数计算出K个哈希值，并将预先已经构建好的“位数组”的相关下标取值置为1。
+当某个元素需要判断是否已经存在时，则同样是先经过 K个哈希函数求取 K个哈希值，并判断“位数组”相应的K个下标的取值是否都为1。
+如果是，则代表元素是“大概率”存在的；否则，表示该元素一定不存在。
+
+布隆过滤器的去重算法核心执行步骤如下：
+1. 设计并构造K个哈希函数，每个函数可以把元素散列成为一个整数，即每个元素经过函数的计算求值，将得到一个整数值。
+2. 初始化一个长度为N的比特数组，即位数组，将每个比特位，即数组的元素取值初始化为0。
+3. 当某个元素要加入集合时，需要先用 K个哈希函数计算出 K个散列值，并把数组中对应下标的元素赋值为1。
+4. 在判断某个元素是否存在集合时，先用 K个哈希函数计算出 K个散列值，并查询数组中对应下标的取值，如果所有的数组下标对应的元素取值都为1，则可以认为该元素“大概率”地存在于该集合中，如果数组中有其中任意一个元素的取值不为1，则可以确定该元素一定不存在于该集合中。
+
+优缺点：
+- 优点：不需要开辟额外的内存存储元素，从而节省了存储空间
+- 缺点：判断元素是否在集合中时，有一定的误判率，并且添加进布隆过滤器的元素是无法删除的，因为位数组的下标是多个元素“共享”的，如果删除的话，很有可能出现“误删”的情况。
+
+```java
+@Slf4j
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest
+public class RedisTemplateTest {
+
+  @Autowired
+  private RedissonClient redissonClient;
+
+  @Test
+  public void testBloomFilter() {
+    //创建布隆过滤器组建
+    final String key = "myBloomFilter";
+    RBloomFilter<BloomDTO> bloomFilter = redissonClient.getBloomFilter(key);
+    //初始化布隆过滤器，预计统计数据量1000，期望误报率为0.01
+    bloomFilter.tryInit(1000, 0.01);
+
+    BloomDTO bloomDTO = new BloomDTO(1, "1");
+    BloomDTO bloomDTO1 = new BloomDTO(100, "100");
+    BloomDTO bloomDTO2 = new BloomDTO(1000, "1000");
+    BloomDTO bloomDTO3 = new BloomDTO(10000, "10000");
+
+    //向布隆过滤器添加对象
+    bloomFilter.add(bloomDTO);
+    bloomFilter.add(bloomDTO1);
+    bloomFilter.add(bloomDTO2);
+    bloomFilter.add(bloomDTO3);
+
+    //检查特定的元素在布隆过滤器中是否存在
+    log.info("该布隆过滤器是否包含数据（1，\"1\"）:{}", bloomFilter.contains(new BloomDTO(1, "1")));
+    log.info("该布隆过滤器是否包含数据（2，\"2\"）:{}", bloomFilter.contains(new BloomDTO(2, "2")));
+    log.info("该布隆过滤器是否包含数据（11，\"11\"）:{}", bloomFilter.contains(new BloomDTO(11, "11")));
+    log.info("该布隆过滤器是否包含数据（32323，\"32323\"）:{}", bloomFilter.contains(new BloomDTO(32323, "32323")));
+    log.info("该布隆过滤器是否包含数据（1000，\"1000\"）:{}", bloomFilter.contains(new BloomDTO(1000, "1000")));
+    log.info("该布隆过滤器是否包含数据（10000，\"10000\"）:{}", bloomFilter.contains(new BloomDTO(10000, "10000")));
+  }
+}
+```
+输出结果：
+```text
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（1，"1"）:true
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（2，"2"）:false
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（11，"11"）:false
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（32323，"32323"）:false
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（1000，"1000"）:true
+c.chenyue.combat.web.RedisTemplateTest   : 该布隆过滤器是否包含数据（10000，"10000"）:true
+```
+
+### 应用场景之分布式锁
+Redisson都有哪些锁类型：
+1. 可重入锁（Reentrant Lock）：允许同一个线程重复获取锁，避免死锁。 
+2. 公平锁（Fair Lock）：按照线程获取锁的顺序进行分配。 
+3. 读写锁（ReadWrite Lock）：支持读并发、写互斥，适用于读多写少的场景。 
+4. 联锁（MultiLock）：同时对多个锁进行加锁或解锁。 
+5. 红锁（RedLock）：基于多个 Redis 实例的分布式锁，提供更高的可靠性和安全性。 
+6. 信号量（Semaphore）：限制同时访问某一资源的线程数。 
+7. 闭锁（CountDownLatch）：等待其他线程完成某个操作再继续执行。 
+8. 读写锁分离器（ReadWriteLock分离器）：对读写锁进行分离，提供更好的性能。 
+9. 限时锁（Lock Watchdog）：在获取锁时设置超时时间，防止死锁。
+
+**分布式锁之一次性锁实战**
+
+如果当前线程可以获取到分布式锁，则成功获取之，如果获取不到，当前线程将永远的被“抛弃”。这对于该线程而言，相当于有一道天然的屏障一样，永远地阻隔了该线程与共享资源“见面”。
+```java
+@Slf4j
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest
+public class RedisTemplateTest {
+  @Autowired
+  private RedissonClient redissonClient;
+  
+  @Test
+  public void testRedissonLock(String redId, String userId) {
+    //定义锁的名称
+    final String lockKey = redId + userId + "_lock";
+    //获取分布式锁实例
+    RLock lock = redissonClient.getLock(lockKey);
+    try{
+      //上锁
+      lock.lock(10, TimeUnit.SECONDS);
+      //从预计算的随机红包列表中，拿出一个红包
+      
+      //更新缓存中的红包个数-1
+
+      //记录抢红包记录
+
+      //将当前抢到红包的用户设置进缓存系统中，用于表示当前用户已经抢过红包了
+    }catch (Exception e) {
+      throw new BusinessException("系统异常-抢红包-分布式加锁失败！");
+    }finally {
+      //释放分布式锁，forceUnlock() 强制释放锁，
+      if(lock != null) {
+        lock.forceUnlock();
+      }
+    }
+  }
+}
+```
+
+**分布式锁之可重入锁实战**
+
+分布式锁的可重入，指的是当高并发产生多线程时，如果当前线程不能获取到分布式锁，它并不会立即被“抛弃”，而是会等待一定的时间，重新尝试去获取分布式锁。
+如果可以获取成功，则执行后续操作共享资源的步骤；如果不能获取到锁，而且重试的时间达到了上限，则意味着该线程将被“抛弃”。
+
+分布式锁的可重入方式适用于那些在同一时刻并发产生多线程时，虽然在某一时刻不能获取到分布式锁，但是却允许隔一定的时间重新获取到“分布式锁”并操作共享资源的场景。
+典型的应用场景当属商城平台高并发抢购商品的业务。
+
+```java
+@Slf4j
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest
+public class RedisTemplateTest {
+  @Autowired
+  private RedissonClient redissonClient;
+  
+  @Test
+  public void testRedissonLock(String booNo, String userId) {
+    //定义锁的名称，在秒杀场景中每个用户只能抢到一个书籍
+    final String lockKey = booNo + userId + "_lock";
+    //获取分布式锁实例
+    RLock lock = redissonClient.getLock(lockKey);
+    try{
+      //尝试加锁，最多等待100秒，上锁后10秒自动释放锁
+      boolean result = lock.tryLock(100,10, TimeUnit.SECONDS);
+      if(result) {
+          //如果库存充足，且用户没有购买过，则减库存-1
+          
+          //更新库存成功后，记录购买记录
+      }
+      //将当前抢到红包的用户设置进缓存系统中，用于表示当前用户已经抢过红包了
+    }catch (Exception e) {
+      throw new BusinessException("系统异常-分布式加锁失败！");
+    }finally {
+      //释放分布式锁，forceUnlock() 强制释放锁，
+      if(lock != null) {
+        lock.forceUnlock();
+      }
+    }
+  }
+}
+```
+
+### 应用场景之点赞
+对点赞场景分析，主要由3大操作模块构成：
+- 点赞模块/取消点赞：接收用户的点赞/取消点赞请求，处理并存储用户的点赞/取消点赞信息。
+- 缓存模块：指用于缓存用户点赞、取消点赞的相关信息
+- 点赞排行榜模块：主要是根据数据库中点赞的总数对文章/博客进行排序（从大到小或者从小到大的顺序都是可以的）
+
+```sql
+-- 用户点赞记录表
+CREATE TABLE `praise` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `blog_id` int(11) NOT NULL COMMENT '博客id',
+  `user_id` int(11) NOT NULL COMMENT '点赞人',
+  `praise_time` datetime DEFAULT NULL COMMENT '点赞时间',
+  `status` int(11) DEFAULT '1' COMMENT '状态(1=正常；0=取消点赞)',
+  `is_active` int(11) DEFAULT '1' COMMENT '是否有效(1=是；0=否)',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` timestamp NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  COMMENT='用户点赞记录表';
+```
+

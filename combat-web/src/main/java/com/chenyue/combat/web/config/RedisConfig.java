@@ -1,8 +1,14 @@
 package com.chenyue.combat.web.config;
 
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.RedisClient;
+import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,6 +23,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableCaching
 @Configuration
 public class RedisConfig {
+
+    @Autowired
+    private Environment environment;
 
     /**
      * redisTemplate
@@ -44,4 +53,16 @@ public class RedisConfig {
     public ValueOperations<String, Object> redisValueOperate(RedisTemplate<String, Object> redisTemplate) {
         return redisTemplate.opsForValue();
     }
+
+    @Bean
+    public RedissonClient config() {
+        Config config = new Config();
+        //单一节点模式
+        config.useSingleServer()
+                .setAddress(environment.getProperty("redisson.host.config"))
+                .setKeepAlive(true);
+
+        return Redisson.create(config);
+    }
+
 }

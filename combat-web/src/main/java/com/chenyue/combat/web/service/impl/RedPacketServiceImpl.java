@@ -97,6 +97,7 @@ public class RedPacketServiceImpl implements RedPacketService {
             final String lockKey = redId + userId + "_lock";
             Boolean lock = redisValueOperate.setIfAbsent(lockKey, redId, 24, TimeUnit.HOURS);
             try{
+                //加锁成功
                 if(lock) {
                     //从预计算的随机红包列表中，拿出一个红包
                     Object packetValue =  redisTemplate.opsForList().rightPop(redId);
@@ -117,6 +118,10 @@ public class RedPacketServiceImpl implements RedPacketService {
                     }
                 }
             }catch (Exception e) {
+                //释放分布式锁
+                if(Objects.equals(redisValueOperate.get(lockKey), redId)) {
+                    redisValueOperate.decrement(lockKey);
+                }
                 throw new BusinessException("系统异常-抢红包-分布式加锁失败！");
             }
         }
