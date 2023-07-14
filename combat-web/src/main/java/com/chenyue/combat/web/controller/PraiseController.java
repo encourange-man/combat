@@ -2,9 +2,7 @@ package com.chenyue.combat.web.controller;
 
 import com.chenyue.combat.server.entity.dto.PraiseDTO;
 import com.chenyue.combat.server.entity.vo.BaseResponse;
-import com.chenyue.combat.server.enums.StatusCode;
 import com.chenyue.combat.web.service.PraiseService;
-import com.chenyue.combat.web.service.impl.PraiseServiceImpl;
 import com.google.common.collect.Maps;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
