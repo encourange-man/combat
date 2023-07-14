@@ -618,6 +618,37 @@ public class RedisTemplateTest {
   }
 }
 ```
+//TODO: 这块yuan
+**Redisson的底层加锁过程：**
+
+可以看到，Redisson底层也是使用lua脚本进行加锁的
+```java
+ <T> RFuture<T> tryLockInnerAsync(long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
+        internalLockLeaseTime = unit.toMillis(leaseTime);
+
+        return commandExecutor.evalWriteAsync(getName(), LongCodec.INSTANCE, command,
+                  "if (redis.call('exists', KEYS[1]) == 0) then " +   //Redisson锁实例key是否存在，若不存在，
+                      "redis.call('hset', KEYS[1], ARGV[2], 1); " +   // hset 设置当前线程Id 为 1（表示当前线程第一次获取锁，可重入锁记录线程持有锁的次数）
+                      "redis.call('pexpire', KEYS[1], ARGV[1]); " +   // pexpire 设置锁的过期时间 leaseTime
+                      "return nil; " +                                // return nil，加锁成功
+                  "end; " +
+                  "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +   //如果持有锁的线程再来加锁
+                      "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +          //hincryby 线程持有锁的次数 +1
+                      "redis.call('pexpire', KEYS[1], ARGV[1]); " +             //pexpire 设置锁的过期时间 leaseTime
+                      "return nil; " +                                          // return nil，加锁成功
+                  "end; " +
+                  "return redis.call('pttl', KEYS[1]);",   //加锁失败，返回这个锁还有多久过期
+                    Collections.<Object>singletonList(getName()), internalLockLeaseTime, getLockName(threadId));
+    }
+```
+
+**看门狗：Redisson主动续期**
+
+```java
+
+```
+
+
 
 **分布式锁之可重入锁实战**
 
