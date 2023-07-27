@@ -5,6 +5,19 @@
     - [集成mybatis](#集成mybatis)
   - [Springboot集成Redis](#springboot集成redis)
   - [Redis应用场景之抢红包系统](#redis应用场景之抢红包系统)
+  - [分布式锁](#分布式锁)
+    - [基于数据库实现分布式锁](#基于数据库实现分布式锁)
+      - [数据库-乐观锁](#数据库-乐观锁)
+    - [数据库-悲观锁](#数据库-悲观锁)
+    - [基于redis分布式锁](#基于redis分布式锁)
+    - [基于zookeeper分布式锁](#基于zookeeper分布式锁)
+  - [Redisson](#redisson)
+    - [应用场景之布隆过滤器](#应用场景之布隆过滤器)
+    - [应用场景之分布式锁](#应用场景之分布式锁)
+    - [应用场景之点赞](#应用场景之点赞)
+- [加油站](#加油站)
+  - [1.itext 生成pdf](#1itext-生成pdf)
+  - [2.sprinboot读取jar包中的resource目录下的文件](#2sprinboot读取jar包中的resource目录下的文件)
 
 
 ## 项目架构介绍
@@ -713,4 +726,24 @@ CREATE TABLE `praise` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  COMMENT='用户点赞记录表';
 ```
+
+
+# 加油站
+## 1.itext 生成pdf
+
+## 2.sprinboot读取jar包中的resource目录下的文件
+生产环境中会将项目package一个jar包，
+```java
+//第一种方式
+ClassPathResource classPathResource = new ClassPathResource("excleTemplate/test.xlsx");
+InputStream inputStream =classPathResource.getInputStream();
+
+//第二种方式
+InputStream inputStream = this.getClass().getResourceAsStream("/excleTemplate/test.xlsx");
+
+//第三种方式，
+private final ResourceLoader resourceLoader;
+ Resource resourcePath = resourceLoader.getResource("classpath:template");
+```
+这三种方式殊途同归，都是通过类加载器读取jar包中的编译后的class文件。
 
