@@ -18,6 +18,7 @@
 - [加油站](#加油站)
   - [1.itext 生成pdf](#1itext-生成pdf)
   - [2.sprinboot读取jar包中的resource目录下的文件](#2sprinboot读取jar包中的resource目录下的文件)
+  - [3.常用的终端命令](#3常用的终端命令)
 
 
 ## 项目架构介绍
@@ -746,4 +747,8 @@ private final ResourceLoader resourceLoader;
  Resource resourcePath = resourceLoader.getResource("classpath:template");
 ```
 这三种方式殊途同归，都是通过类加载器读取jar包中的编译后的class文件。
+
+
+## 3.常用的终端命令
+- 查看端口占用：lsof -i:<端口号>
 
