@@ -8,9 +8,9 @@ import com.chenyue.combat.server.mapper.RedDetailMapper;
 import com.chenyue.combat.server.mapper.RedRecordMapper;
 import com.chenyue.combat.server.mapper.RedRobRecordMapper;
 import com.chenyue.combat.server.service.RedService;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -20,15 +20,11 @@ import java.util.List;
  * @Date 2023/6/14
  */
 @Service
+@AllArgsConstructor
 public class RedServiceImpl implements RedService {
-    @Resource
-    private RedDetailMapper redDetailMapper;
-
-    @Resource
-    private RedRecordMapper redRecordMapper;
-
-    @Resource
-    private RedRobRecordMapper redRobRecordMapper;
+    private final RedDetailMapper redDetailMapper;
+    private final RedRecordMapper redRecordMapper;
+    private final RedRobRecordMapper redRobRecordMapper;
 
 
     /**

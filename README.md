@@ -1,9 +1,9 @@
 # 分布式框架实战练手项目
 - [分布式框架实战练手项目](#分布式框架实战练手项目)
   - [项目架构介绍](#项目架构介绍)
+  - [启动配置](#启动配置)
     - [集成日志框架](#集成日志框架)
     - [集成mybatis](#集成mybatis)
-  - [Springboot集成Redis](#springboot集成redis)
   - [Redis应用场景之抢红包系统](#redis应用场景之抢红包系统)
   - [分布式锁](#分布式锁)
     - [基于数据库实现分布式锁](#基于数据库实现分布式锁)
@@ -28,6 +28,32 @@
 模块的依赖关系：
 
 combat-server -> combat-web
+
+## 启动配置
+combat-web依赖redis和mysql，所以本地要先启动redis和mysql。
+
+- docker启动redis镜像
+```shell
+# 启动redis镜像
+docker run -d --name redis -p 6379:6379 redis 
+
+#后台进入redis容器
+docker exec -it <image_id> /bin/bash
+
+redis-cli -h 127.0.0.1 -p 6379
+```
+
+- docker 启动mysql镜像
+```shell
+# 启动docker镜像，MYSQL_ROOT_PASSWORD设置root用户的登陆密码 
+ docker run -d --name mysql_0 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 --privileged mysql
+# 进入mysql容器
+docker exec -it <image_id> /bin/bash
+# 登陆root用户
+mysql -uroot -p123456
+#修改root可以通过任何客户端链接
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '123456';
+```
 
 ### 集成日志框架
 市面上常见的日志框架有很多，它们可以被分为两类：日志门面（日志抽象层）和日志实现
@@ -254,30 +280,6 @@ spring.datasource.password=123456
 #mybaits
 mybatis.mapper-locations=classpath*:/sqlmap/*.xml
 mybatis.type-aliases-package=com.chenyue.combat.server.domain
-```
-
-## Springboot集成Redis
-docker启动redis镜像
-```shell
-# 启动redis镜像
-docker run -d --name redis -p 6379:6379 redis 
-
-#后台进入redis容器
-docker exec -it <image_id> /bin/bash
-
-redis-cli -h 127.0.0.1 -p 6379
-```
-
-docker 启动mysql镜像
-```shell
-# 启动docker镜像，MYSQL_ROOT_PASSWORD设置root用户的登陆密码 
- docker run -d --name mysql_0 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 --privileged mysql
-# 进入mysql容器
-docker exec -it <image_id> /bin/bash
-# 登陆root用户
-mysql -uroot -p123456
-#修改root可以通过任何客户端链接
-ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '123456';
 ```
 
 ## Redis应用场景之抢红包系统
@@ -751,4 +753,5 @@ private final ResourceLoader resourceLoader;
 
 ## 3.常用的终端命令
 - 查看端口占用：lsof -i:<端口号>
+- 解压tar文件到指定的目录：tar -xvf <tar文件名> -C <文件目录>
 

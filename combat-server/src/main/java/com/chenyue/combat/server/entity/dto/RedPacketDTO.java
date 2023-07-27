@@ -1,8 +1,8 @@
 package com.chenyue.combat.server.entity.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
 
 /**
  * @Author chenyue

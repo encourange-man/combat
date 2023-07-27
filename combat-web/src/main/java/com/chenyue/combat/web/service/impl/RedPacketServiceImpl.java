@@ -6,19 +6,18 @@ import com.chenyue.combat.server.service.RedService;
 import com.chenyue.combat.server.utils.RedPacketUtil;
 import com.chenyue.combat.web.exception.BusinessException;
 import com.chenyue.combat.web.service.RedPacketService;
+import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static com.chenyue.combat.server.enums.StatusCode.Fail;
 
 /**
  * @Author chenyue
@@ -26,17 +25,13 @@ import static com.chenyue.combat.server.enums.StatusCode.Fail;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class RedPacketServiceImpl implements RedPacketService {
     public static final String keyPreFix = "redis:red:packet";
 
-    @Resource
-    private RedisTemplate redisTemplate;
-
-    @Resource
-    private ValueOperations<String, Object> redisValueOperate;
-
-    @Resource
-    private RedService redService;
+    private final RedisTemplate redisTemplate;
+    private final ValueOperations<String, Object> redisValueOperate;
+    private final RedService redService;
 
     /**
      * 发放手气红包

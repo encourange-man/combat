@@ -7,10 +7,11 @@ import com.chenyue.combat.server.mapper.UserAccountMapper;
 import com.chenyue.combat.server.mapper.UserAccountRecordMapper;
 import com.chenyue.combat.web.exception.BusinessException;
 import com.chenyue.combat.web.service.DataBaseLockService;
+import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -20,13 +21,10 @@ import java.util.Objects;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class DataBaseLockServiceImpl implements DataBaseLockService {
-
-    @Resource
-    private UserAccountMapper userAccountMapper;
-
-    @Resource
-    private UserAccountRecordMapper userAccountRecordMapper;
+    private final UserAccountMapper userAccountMapper;
+    private final UserAccountRecordMapper userAccountRecordMapper;
 
 
     @Override

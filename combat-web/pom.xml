@@ -45,6 +45,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!--eureka client，启动类上不需要@EnableEurekaClient-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+
 
     </dependencies>
 

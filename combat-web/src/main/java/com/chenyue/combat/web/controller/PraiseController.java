@@ -4,13 +4,14 @@ import com.chenyue.combat.server.entity.dto.PraiseDTO;
 import com.chenyue.combat.server.entity.vo.BaseResponse;
 import com.chenyue.combat.web.service.PraiseService;
 import com.google.common.collect.Maps;
+import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
 
 import java.util.HashMap;
 
@@ -22,10 +23,9 @@ import static com.chenyue.combat.server.enums.StatusCode.Success;
  * @Date 2023/6/20
  */
 @RestController
+@AllArgsConstructor
 public class PraiseController {
-
-    @Resource
-    private PraiseService praiseService;
+    private final PraiseService praiseService;
 
     /**
      * 点赞博客

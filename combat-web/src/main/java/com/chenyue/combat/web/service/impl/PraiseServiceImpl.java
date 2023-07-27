@@ -6,12 +6,12 @@ import com.chenyue.combat.server.entity.dto.PraiseRankDTO;
 import com.chenyue.combat.server.mapper.PraiseMapper;
 import com.chenyue.combat.web.service.PraiseService;
 import com.chenyue.combat.web.service.RedisPraiseService;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -23,17 +23,13 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class PraiseServiceImpl implements PraiseService {
     private static final String keyAddPraiseLock = "RedisBlogPraiseAddLock-";
 
-    @Resource
-    private RedissonClient redissonClient;
-
-    @Resource
-    private PraiseMapper praiseMapper;
-
-    @Resource
-    private RedisPraiseService redisPraiseService;
+    private final RedissonClient redissonClient;
+    private final PraiseMapper praiseMapper;
+    private final RedisPraiseService redisPraiseService;
 
     /**
      * 点赞博客

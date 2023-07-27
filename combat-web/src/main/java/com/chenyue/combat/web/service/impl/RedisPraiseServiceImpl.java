@@ -3,6 +3,8 @@ package com.chenyue.combat.web.service.impl;
 import com.chenyue.combat.server.entity.dto.PraiseRankDTO;
 import com.chenyue.combat.server.mapper.PraiseMapper;
 import com.chenyue.combat.web.service.RedisPraiseService;
+import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RList;
 import org.redisson.api.RLock;
@@ -11,7 +13,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -23,17 +24,15 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class RedisPraiseServiceImpl implements RedisPraiseService {
     //缓存中记录用户点赞记录key
     private static final String keyBlog = "RedisBlogPraiseMap";
     //定义用于缓存排行榜的Key
     final static String praiseRankKey = "praiseRankListKey";
 
-    @Resource
-    private RedissonClient redissonClient;
-
-    @Resource
-    private PraiseMapper praiseMapper;
+    private final RedissonClient redissonClient;
+    private final PraiseMapper praiseMapper;
 
 
     /**

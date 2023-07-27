@@ -3,14 +3,14 @@ package com.chenyue.combat.web.controller;
 import com.chenyue.combat.server.entity.dto.RedPacketDTO;
 import com.chenyue.combat.server.entity.vo.BaseResponse;
 import com.chenyue.combat.web.service.RedPacketService;
+import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -26,13 +26,10 @@ import static com.chenyue.combat.server.enums.StatusCode.Success;
 @Slf4j
 @RestController
 @RequestMapping("/red/packet")
+@AllArgsConstructor
 public class RedPacketController {
-
-    @Resource
-    private RedPacketService redPacketService;
-
-    @Resource
-    private RedisTemplate<String, Object> redisTemplate;
+    private final RedPacketService redPacketService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 发放手气红包
