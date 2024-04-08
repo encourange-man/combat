@@ -15,10 +15,14 @@
     - [应用场景之布隆过滤器](#应用场景之布隆过滤器)
     - [应用场景之分布式锁](#应用场景之分布式锁)
     - [应用场景之点赞](#应用场景之点赞)
+  - [整合swagger](#整合swagger)
 - [加油站](#加油站)
   - [1.itext 生成pdf](#1itext-生成pdf)
   - [2.sprinboot读取jar包中的resource目录下的文件](#2sprinboot读取jar包中的resource目录下的文件)
   - [3.常用的终端命令](#3常用的终端命令)
+  - [TODO: JVM-sandbox](#todo-jvm-sandbox)
+  - [SQL优化](#sql优化)
+    - [1.count(distinct)](#1countdistinct)
 
 
 ## 项目架构介绍
@@ -730,6 +734,47 @@ CREATE TABLE `praise` (
 ) ENGINE=InnoDB  COMMENT='用户点赞记录表';
 ```
 
+## 整合swagger
+springboot3.0 整合swagger:
+
+1.添加maven依赖
+```xml
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-boot-starter</artifactId>
+    <version>3.0.0</version>
+</dependency>
+```
+
+2.创建一个swagger配置类
+```java
+@Configuration
+@EnableSwagger2
+public class SwaggerConfig {
+
+    @Bean
+    public Docket api() {
+        ApiInfo apiInfo = new ApiInfoBuilder()
+                .title("Combat 接口文档")
+                .description("API Description")
+                .version("1.0.0")
+                .build();
+
+        return new Docket(DocumentationType.SWAGGER_2)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.chenyue.combat"))
+                .paths(PathSelectors.any())
+                .build()
+                .apiInfo(apiInfo);
+
+    }
+}
+```
+备注：[Spring Boot整合Swagger报错："this.condition" is null](https://www.cnblogs.com/didispace/p/16320202.html)
+
+
+
+
 
 # 加油站
 ## 1.itext 生成pdf
@@ -755,3 +800,18 @@ private final ResourceLoader resourceLoader;
 - 查看端口占用：lsof -i:<端口号>
 - 解压tar文件到指定的目录：tar -xvf <tar文件名> -C <文件目录>
 
+
+## TODO: JVM-sandbox
+https://zhuanlan.zhihu.com/p/583394190
+
+## SQL优化
+### 1.count(distinct)
+修改前：
+```sql
+select count(distinct url_hash) from project_scan_api where project_id = 63 and scan_task_id = 5
+```
+
+修改后：
+```sql
+select count(*) from (select url_hash from project_scan_api where project_id = 63 and scan_task_id = 5) as tmp
+```

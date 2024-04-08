@@ -1,4 +1,4 @@
-README.md
+Combat.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+mvnw
+mvnw.cmd
+.m
+.DS_Store
+.DS_Store
+*.jar

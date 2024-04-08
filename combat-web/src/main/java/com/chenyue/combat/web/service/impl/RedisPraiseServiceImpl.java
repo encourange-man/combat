@@ -3,7 +3,6 @@ package com.chenyue.combat.web.service.impl;
 import com.chenyue.combat.server.entity.dto.PraiseRankDTO;
 import com.chenyue.combat.server.mapper.PraiseMapper;
 import com.chenyue.combat.web.service.RedisPraiseService;
-import jakarta.annotation.Resource;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RList;

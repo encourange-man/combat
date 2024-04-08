@@ -67,7 +67,8 @@ Eureka Server自身是一种特殊的服务提供者，对外提供REST服务，
 Region和Zone可以理解为服务器的位置，Region可以理解为服务器所在的地域，Zone可以理解为服务器所处的机房。配置Region与Zone的主要目的是，在网络环境复杂的情况下帮助客户端就近访问需要的Provider实例。负载均衡组件Spring Cloud Ribbon的默认策略是优先访问与客户端处于同一个Zone中的服务端实例，只有当同一个Zone中没有可用服务端实例时，才会访问其他Zone中的实例。
 
 
-## 服务提供者的创建和配置
+> **服务提供者的创建和配置**
+
 注册中心Eureka Server创建并启动之后，接下来介绍如何创建一个Provider并且注册到Eureka Server中，再提供一个REST接口给其他服务调用？
 
 首先一个Provider要引入Eureka Client组件包的依赖
@@ -79,4 +80,94 @@ Region和Zone可以理解为服务器的位置，Region可以理解为服务器�
         <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
     </dependency>
 </dependencies>
+```
+备注：启动类上不需要配置`@EnableEurekaClinet`
+
+Spring Cloud中的一个Provider实例身兼两个角色：服务提供者和注册中心客户端。所以，在Provider的配置文件中包含两类配置：Provider实例角色的相关配置和Eureka Client角色的相关配置。
+
+Provider实例角色的相关配置:
+```properties
+# 配置Provider实例ID，默认值的格式：${spring.cloud.client.hostname}:${spring.application.name}:${server.port} （主机名：服务名称：服务端口）
+eureka.instance.instance-id= ${spring.cloud.client.ip-address}:${server.port}
+
+#设置当前实例的IP地址
+eureka.instance.ip-address=
+
+#配置为true，就使用IP地址的形式来定义Provider实例的地址，而不是使用主机名来定义Provider实例的地址
+eureka.instance.prefer-ip-address=
+
+#定义Provider实例状态页面的URL，此选项配置的是相对路径，默认使用HTTP访问，如果需要使用HTTPS，就使用绝对路径配置。默认的相对路径为/info
+eureka.instance.status-page-url-path=
+
+#定义Provider实例健康检查页面的URL，此选项配置的是相对路径，默认使用HTTP访问，如果需要使用HTTPS，就使用绝对路径配置。默认的相对路径为/health
+eureka.instance.health-check-url-path=
+```
+
+Eureka Client角色的相关配置:
+```properties
+#这里设置为true，表示需要将Provider实例注册到Eureka Server
+eureka.client.register-with-eureka=
+
+#是否从Eureka Server获取注册信息，这里设置为true，表示需要从Eureka Server定期获取注册了的Provider实例清单
+eureka.client.fetch-registry=
+
+#作为Eureka Client，需要向远程的Eureka Server自我注册，查询其他的提供者。此配置项用于设置此客户端默认Zone（类似于默认机房）的Eureka Server的交互地址
+eureka.client.service-url.defaultZone=
+```
+
+> **服务提供者续约（心跳）**
+
+服务提供者的续约（心跳）保活由Provider Instance主动定期执行来实现，默认是开启的，默认每隔30秒一段时间就调用Eureka Server提供的REST保活接口，发送Provider Instance的状态信息给注册中心，告诉注册中心注册者还在正常运行。
+```properties
+#心跳时间，即服务续约间隔时间
+eureka.instance.lease-renewal-interval-in-seconds=30
+
+#租约有效期，如果Eureka Client未续约（心跳），Eureka Server将剔除该服务。默认90s，也就说instance实例有3次心跳重试的机会
+eureka.instance.lease-expiration-duration-in-seconds=90
+```
+
+备注：
+
+Eureka Server提供了多个和Provider Instance相关的Spring上下文ApplicationEvent，以方便应用程序进行监听：
+- EurekaInstanceRenewedEvent：服务续约事件
+- EurekaInstanceRegisteredEvent：服务注册事件
+- EurekaInstanceCanceledEvent：服务下线事件
+- EurekaRegistryAvailableEvent：Eureka注册中心启动事件
+- EurekaServerStartedEvent：Eureka Server启动事件
+
+> **服务提供者的健康状态**
+
+Eureka Server并不记录 服务提供者Provider 的所有健康状况信息，仅仅维护了一个Provider清单。Eureka Client组件查询的Provider注册清单中，包含每一个Provider的健康状况的检查地址。通过该健康状况的地址可以查询Provider的健康状况。
+
+通过 Eureka Server的 `/eureka/apps/{application}` 接口地址获取某个Provider实例的详细信息，
+
+```xml
+<application>
+    <name>COMBAT-WEB</name>
+    <instance>
+        <instanceId>30.240.115.115:combat-web:8089</instanceId>
+        <hostName>30.240.115.115</hostName>
+        <app>COMBAT-WEB</app>
+        <ipAddr>30.240.115.115</ipAddr>
+        <!-- Provider实例本身发布的健康状态, UP-健康， DOWN, OUT_OF_SERVER, UNKONWN -->
+        <status>UP</status>
+        <overriddenstatus>UNKNOWN</overriddenstatus>
+        <port enabled="true">8089</port>
+        <securePort enabled="false">443</securePort>
+        <countryId>1</countryId>
+        
+        <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+            <name>MyOwn</name>
+        </dataCenterInfo>
+        
+        .....
+    
+        <homePageUrl>http://30.240.115.115:8089/</homePageUrl>
+        <!-- provider实例的状态URL地址       -->
+        <statusPageUrl>http://30.240.115.115:8089/actuator/info</statusPageUrl>
+        <!-- provider实例的健康信息URL       -->
+        <healthCheckUrl>http://30.240.115.115:8089/actuator/health</healthCheckUrl>
+        .....
+    </instance>
+</application>
 ```

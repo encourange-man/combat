@@ -2,21 +2,19 @@ package com.chenyue.combat.web;
 
 import com.chenyue.combat.server.entity.dto.BloomDTO;
 import com.chenyue.combat.web.exception.BusinessException;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,13 +24,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest
+@AllArgsConstructor
 public class RedisTemplateTest {
 
-    @Autowired
-    private RedisTemplate redisTemplate;
-
-    @Autowired
-    private RedissonClient redissonClient;
+    private final RedisTemplate redisTemplate;
+    private final RedissonClient redissonClient;
 
     @Test
     public void test() {
