@@ -37,3 +37,7 @@ mvnw.cmd
 .DS_Store
 .DS_Store
 *.jar
+.mvn/wrapper/
+eureka-server/.mvn/wrapper/
+combat-server/.mvn/wrapper/
+combat-web/.mvn/wrapper/
